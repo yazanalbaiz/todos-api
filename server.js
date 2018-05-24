@@ -2,7 +2,7 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const config = require('./config')
-const contacts = require('./contacts')
+const tasks = require('./tasks')
 
 const app = express()
 
@@ -12,7 +12,7 @@ app.use(cors())
 app.get('/', (req, res) => {
   const help = `
   <pre>
-    Welcome to the Address Book API!
+    Welcome to the ToDos API!
 
     Use an Authorization header to work with your own data:
 
@@ -20,9 +20,9 @@ app.get('/', (req, res) => {
 
     The following endpoints are available:
 
-    GET /contacts
-    DELETE /contacts/:id
-    POST /contacts { name, email, avatarURL }
+    GET /tasks
+    DELETE /tasks/:id
+    POST /tasks { name, email, avatarURL }
   </pre>
   `
 
@@ -37,31 +37,51 @@ app.use((req, res, next) => {
     next()
   } else {
     res.status(403).send({
-      error: 'Please provide an Authorization header to identify yourself (can be whatever you want)'
+      error: 'Please provide an auth header to identify yourself (can be anything)'
     })
   }
 })
 
-app.get('/contacts', (req, res) => {
-  res.send(contacts.get(req.token))
+app.get('/tasks', (req, res) => {
+  res.send(tasks.get(req.token))
 })
 
-app.delete('/contacts/:id', (req, res) => {
-  res.send(contacts.remove(req.token, req.params.id))
+app.delete('/tasks/:id', (req, res) => {
+  var responder = tasks.remove(req.token, req.params.id);
+  res.send(responder);
 })
 
-app.post('/contacts', bodyParser.json(), (req, res) => {
-  const { name, email } = req.body
+app.post('/tasks', bodyParser.json(), (req, res) => {
+  const { id, name, done, className } = req.body;
 
-  if (name && email) {
-    res.send(contacts.add(req.token, req.body))
+  if (id && name && className) {
+    res.send(tasks.add(req.token, req.body))
   } else {
     res.status(403).send({
-      error: 'Please provide both a name and an email address'
+      error: 'Please provide id + name + status + class name'
     })
   }
 })
 
+app.put('/tasks/:id', bodyParser.json(), (req, res) => {
+  const { id, name, done, className } = req.body;
+
+  if (id && name && className) {
+    res.send(tasks.checkOne(req.token, req.body))
+  } else {
+    res.status(403).send({
+      error: 'Please provide id + name + status + class name'
+    })
+  }
+})
+
+app.delete('/tasks', (req, res) => {
+  res.send(tasks.clearDone(req.token));
+});
+
+app.put('/tasks', (req, res) => {
+  res.send(tasks.checkAll(req.token));
+});
 app.listen(config.port, () => {
-  console.log('Server listening on port %s, Ctrl+C to stop', config.port)
+  console.log('Server Started on port %s', config.port)
 })
